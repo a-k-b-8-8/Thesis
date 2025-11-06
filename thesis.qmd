@@ -38,4 +38,3 @@ gen_joined <- gen_joined |>
     signature_date = as.integer(signature_date),
     ratification_status = as.factor(ratification_status))
 ```
-
