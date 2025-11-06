@@ -1,5 +1,14 @@
 project:
+  type: default
   title: "Thesis"
+  output-dir: .   # or "docs" if you want it to appear in GitHub Pages
+
+format:
+  pdf:
+    toc: true
+    number-sections: true
+
+execute:
+  echo: false
 
 editor: visual
-
