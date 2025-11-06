@@ -10,3 +10,16 @@ Quarto enables you to weave together content and executable code into a finished
 #| label: add-packages
 library(tidyverse)
 ```
+
+```{r}
+#| label: load-data
+gen_con <- read_csv("gen_con_status.csv")
+tmk <- read_csv("edited_tmk_annual_release_1.2.csv")
+
+```
+
+```{r}
+#| label: join-data
+gen_con |>
+  left_join(tmk, by = join_by(Participant == primary.location))
+```
