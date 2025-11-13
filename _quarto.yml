@@ -9,6 +9,6 @@ format:
     number-sections: true
 
 execute:
-  echo: false
+  echo: true
 
 editor: visual

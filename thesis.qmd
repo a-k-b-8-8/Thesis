@@ -36,5 +36,23 @@ gen_joined <- gen_joined |>
       state_system_membership_year),
     signatory_status = as.factor(signatory_status),
     signature_date = as.integer(signature_date),
-    ratification_status = as.factor(ratification_status))
+    ratification_status = as.factor(ratification_status
+                                      
+                                    ))
 ```
+```{r}
+gen_joined |>
+  mutate(in_effect_ix_reservation = as.factor(in_effect_ix_reservation),
+         historical_reservation_made_to_article_ix_no_longer_in_effect = as.factor(historical_reservation_made_to_article_ix_no_longer_in_effect
+                                              ))
+```
+
+```{r}
+gen_joined
+```
+
+```{r}
+#| label: write-csv
+write_csv(gen_joined, file = "gen-joined.csv")
+```
+
