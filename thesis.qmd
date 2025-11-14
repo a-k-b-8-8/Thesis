@@ -48,7 +48,19 @@ gen_joined |>
 ```
 
 ```{r}
-gen_joined
+gen_joined <- gen_joined |>
+  mutate(ever_reserved = case_when(
+    in_effect_ix_reservation == 1 | historical_reservation_made_to_article_ix_no_longer_in_effect == 1 ~ 1,
+    in_effect_ix_reservation == 0 & historical_reservation_made_to_article_ix_no_longer_in_effect == 0 ~ 0
+  )) 
+```
+
+
+
+
+```{r}
+gen_joined |>
+  filter(in_effect_ix_reservation == 1 | historical_reservation_made_to_article_ix_no_longer_in_effect == 1)
 ```
 
 ```{r}
