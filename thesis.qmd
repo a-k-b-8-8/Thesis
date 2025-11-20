@@ -11,6 +11,7 @@ Quarto enables you to weave together content and executable code into a finished
 library(tidyverse)
 library(janitor)
 library(tinytex)
+library(tidymodels)
 ```
 
 ```{r}
@@ -55,6 +56,22 @@ gen_joined <- gen_joined |>
   )) 
 ```
 
+```{r}
+prior_gen_pol_events <- gen_joined |>
+ filter(genpol_onset == 1,
+        ratification_year >= year) |>
+  group_by(participant) |>
+  count()
+
+gen_pol_prior <- c("Bangladesh", "Burundi", "China", "DR Congo", "India", "Nigeria", "North Korea", "Pakistan", "Rwanda", "Serbia", "South Korea", "Sudan", "Uganda", "Vietnam", "Zimbabwe")
+
+gen_joined_2 <- gen_joined |>
+  mutate(gen_bf_rat = if_else(participant %in% gen_pol_prior, 1, 0))
+
+gen_joined_2 <- gen_joined_2 |> 
+  distinct(participant, .keep_all = TRUE)
+
+```
 
 
 
