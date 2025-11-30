@@ -12,13 +12,38 @@ library(tidyverse)
 library(janitor)
 library(tinytex)
 library(tidymodels)
+library(readxl)
 ```
 
 ```{r}
 #| label: load-data
-gen_con <- read_csv("gen_con_status.csv")
-tmk <- read_csv("edited_tmk_annual_release_1.2.csv")
+gen_con <- read_csv("data/gen_con_status.csv")
+tmk <- read_csv("data/edited_tmk_annual_release_1.2.csv")
+tmk_2 <- read_excel("data/tmk_events_release_1.2.xls")
+```
+```{r}
+#| label: view-data
 
+tmk_2_edit <- tmk_2 |>
+  select(
+    country, duration, tmk.ordinal, genpol.ongoing, genpol.onset, group1.tmk.rel, group1.tmk.eth, primary.location
+    ) |>
+  filter(group1.tmk.rel == 1 | group1.tmk.eth == 1) |>
+  clean_names() |> mutate(primary_location = case_when(
+  primary_location == "Soviet Union" ~ "Russia", 
+  primary_location == "DRC Congo (Zaire)" ~ "DR Congo", 
+  primary_location == "Myanmar (Burma)" ~ "Myanmar",
+  primary_location == "Zanzibar" ~ "Tanzania",
+  primary_location == "Bosnia-Herzegovina" ~ "Bosnia-Herzogovina",
+  primary_location == "DR Congo (Zaire)" ~ "DR Congo",
+  primary_location == "Russia (Soviet Union)" ~ "Russia",
+  primary_location == "Serbia (Yugoslavia)" ~ "Serbia",
+  primary_location == "Sudan, Chad" ~ "Sudan",
+  primary_location == "India/Pakistan" ~ "India",
+  primary_location == "Cambodia (Kampuchea)" ~ "Cambodia",
+  TRUE ~ primary_location
+  ))
+                          
 ```
 
 ```{r}
@@ -26,6 +51,14 @@ tmk <- read_csv("edited_tmk_annual_release_1.2.csv")
 gen_joined <- gen_con |>
   left_join(tmk, by = join_by(Participant == primary.location))
 ```
+
+```{r}
+#| label: join-data-2 
+
+gen_2 <- gen_con |>
+  left_join(tmk_2_edit, by = join_by(Participant == primary_location))
+```
+
 
 ```{r}
 #| label: clean-data
@@ -54,6 +87,11 @@ gen_joined <- gen_joined |>
     in_effect_ix_reservation == 1 | historical_reservation_made_to_article_ix_no_longer_in_effect == 1 ~ 1,
     in_effect_ix_reservation == 0 & historical_reservation_made_to_article_ix_no_longer_in_effect == 0 ~ 0
   )) 
+
+gen_joined |>
+  filter(genpol_onset == 1,
+        ratification_year >= year) |>
+  select(year, participant, ratification_year, state_system_membership_year)
 ```
 
 ```{r}
@@ -70,9 +108,19 @@ gen_joined_2 <- gen_joined |>
 
 gen_joined_2 <- gen_joined_2 |> 
   distinct(participant, .keep_all = TRUE)
+gen_joined_2 <- gen_joined_2 |> 
+  mutate(ever_reserved = as.factor(ever_reserved),
+         gen_bf_rat = as.factor(gen_bf_rat))
 
 ```
 
+```{r}
+gen_fit <- logistic_reg() |>
+  fit(ever_reserved ~ gen_bf_rat, data = gen_joined_2)
+tidy(gen_fit) |>
+  mutate(est_exp = exp(estimate))
+
+```
 
 
 ```{r}
@@ -84,4 +132,6 @@ gen_joined |>
 #| label: write-csv
 write_csv(gen_joined, file = "gen-joined.csv")
 ```
+
+
 
