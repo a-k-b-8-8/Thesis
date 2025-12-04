@@ -1,0 +1,101 @@
+---
+title: "Thesis"
+---
+
+## Quarto
+
+Quarto enables you to weave together content and executable code into a finished document. To learn more about Quarto see <https://quarto.org>.
+
+```{r}
+#| label: add-packages
+library(tidyverse)
+library(janitor)
+library(tinytex)
+library(tidymodels)
+library(readxl)
+```
+
+```{r}
+#| label: load-data
+gen_con <- read_csv("data/gen_con_status.csv")
+tmk <- read_csv("data/edited_tmk_annual_release_1.2.csv")
+tmk_2 <- read_excel("data/tmk_events_release_1.2.xls")
+```
+
+```{r}
+#| label: join-data
+gen_joined <- gen_con |>
+  left_join(tmk, by = join_by(Participant == primary.location))
+```
+
+```{r}
+#| label: clean-data
+gen_joined <- gen_joined |>
+  clean_names()
+gen_joined <- gen_joined |>
+  mutate(
+    state_system_membership_year = as.integer(
+      state_system_membership_year),
+    signatory_status = as.factor(signatory_status),
+    signature_date = as.integer(signature_date),
+    ratification_status = as.factor(ratification_status
+                                      
+                                    ))
+
+gen_joined |>
+  mutate(in_effect_ix_reservation = as.factor(in_effect_ix_reservation),
+         historical_reservation_made_to_article_ix_no_longer_in_effect = as.factor(historical_reservation_made_to_article_ix_no_longer_in_effect
+                                              ))
+
+gen_joined <- gen_joined |>
+  mutate(ever_reserved = case_when(
+    in_effect_ix_reservation == 1 | historical_reservation_made_to_article_ix_no_longer_in_effect == 1 ~ 1,
+    in_effect_ix_reservation == 0 & historical_reservation_made_to_article_ix_no_longer_in_effect == 0 ~ 0
+  )) 
+
+gen_joined |>
+  filter(genpol_onset == 1,
+        ratification_year >= year) |>
+  select(year, participant, ratification_year, state_system_membership_year)
+
+gen_joined <- gen_joined |>
+  mutate(ever_reserved = case_when(
+    in_effect_ix_reservation == 1 | historical_reservation_made_to_article_ix_no_longer_in_effect == 1 ~ 1,
+    in_effect_ix_reservation == 0 & historical_reservation_made_to_article_ix_no_longer_in_effect == 0 ~ 0
+  )) 
+
+```
+
+```{r}
+prior_gen_pol_events <- gen_joined |>
+ filter(genpol_onset == 1,
+        ratification_year >= year) |>
+  group_by(participant) |>
+  count()
+
+gen_pol_prior <- c("Bangladesh", "Burundi", "China", "DR Congo", "India", "Nigeria", "North Korea", "Pakistan", "Rwanda", "Serbia", "South Korea", "Sudan", "Uganda", "Vietnam", "Zimbabwe")
+
+gen_joined_2 <- gen_joined |>
+  mutate(gen_bf_rat = if_else(participant %in% gen_pol_prior, 1, 0))
+
+gen_joined_2 <- gen_joined_2 |> 
+  distinct(participant, .keep_all = TRUE)
+gen_joined_2 <- gen_joined_2 |> 
+  mutate(ever_reserved = as.factor(ever_reserved),
+         gen_bf_rat = as.factor(gen_bf_rat))
+
+```
+
+```{r}
+gen_fit <- logistic_reg() |>
+  fit(ever_reserved ~ gen_bf_rat, data = gen_joined_2)
+tidy(gen_fit) |>
+  mutate(est_exp = exp(estimate))
+
+```
+
+```{r}
+#| label: write-csv
+write_csv(gen_joined, file = "gen-joined.csv")
+```
+

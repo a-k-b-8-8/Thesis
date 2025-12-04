@@ -1,7 +1,7 @@
 project:
   type: default
   title: "Thesis"
-  output-dir: .   # or "docs" if you want it to appear in GitHub Pages
+  output-dir: docs
 
 format:
   pdf:

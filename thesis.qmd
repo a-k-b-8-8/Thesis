@@ -26,7 +26,7 @@ tmk_2 <- read_excel("data/tmk_events_release_1.2.xls")
 
 tmk_2_edit <- tmk_2 |>
   select(
-    country, duration, tmk.ordinal, genpol.ongoing, genpol.onset, group1.tmk.rel, group1.tmk.eth, primary.location
+    year, duration, tmk.ordinal, genpol.ongoing, genpol.onset, group1.tmk.rel, group1.tmk.eth, primary.location
     ) |>
   filter(group1.tmk.rel == 1 | group1.tmk.eth == 1) |>
   clean_names() |> mutate(primary_location = case_when(
@@ -47,91 +47,83 @@ tmk_2_edit <- tmk_2 |>
 ```
 
 ```{r}
-#| label: join-data
-gen_joined <- gen_con |>
-  left_join(tmk, by = join_by(Participant == primary.location))
-```
-
-```{r}
 #| label: join-data-2 
 
 gen_2 <- gen_con |>
   left_join(tmk_2_edit, by = join_by(Participant == primary_location))
+view(gen_2)
 ```
 
 
 ```{r}
 #| label: clean-data
-gen_joined <- gen_joined |>
-  clean_names()
-gen_joined <- gen_joined |>
+gen_2 <- gen_2 |>
+  clean_names() |>
   mutate(
     state_system_membership_year = as.integer(
       state_system_membership_year),
     signatory_status = as.factor(signatory_status),
     signature_date = as.integer(signature_date),
-    ratification_status = as.factor(ratification_status
-                                      
-                                    ))
-```
-```{r}
-gen_joined |>
-  mutate(in_effect_ix_reservation = as.factor(in_effect_ix_reservation),
-         historical_reservation_made_to_article_ix_no_longer_in_effect = as.factor(historical_reservation_made_to_article_ix_no_longer_in_effect
-                                              ))
-```
-
-```{r}
-gen_joined <- gen_joined |>
-  mutate(ever_reserved = case_when(
+    ratification_status = as.factor(ratification_status),
+    in_effect_ix_reservation = as.factor(in_effect_ix_reservation),
+    historical_reservation_made_to_article_ix_no_longer_in_effect = as.factor(historical_reservation_made_to_article_ix_no_longer_in_effect),
+    ever_reserved = case_when(
     in_effect_ix_reservation == 1 | historical_reservation_made_to_article_ix_no_longer_in_effect == 1 ~ 1,
-    in_effect_ix_reservation == 0 & historical_reservation_made_to_article_ix_no_longer_in_effect == 0 ~ 0
-  )) 
+    in_effect_ix_reservation == 0 & historical_reservation_made_to_article_ix_no_longer_in_effect == 0 ~ 0)) |>
+  filter(ratification_status == 1)
 
-gen_joined |>
-  filter(genpol_onset == 1,
-        ratification_year >= year) |>
-  select(year, participant, ratification_year, state_system_membership_year)
 ```
 
 ```{r}
-prior_gen_pol_events <- gen_joined |>
- filter(genpol_onset == 1,
-        ratification_year >= year) |>
-  group_by(participant) |>
+gen_2 |>
+  filter(ratification_year >= year) |>
+  group_by(participant) |> 
   count()
 
-gen_pol_prior <- c("Bangladesh", "Burundi", "China", "DR Congo", "India", "Nigeria", "North Korea", "Pakistan", "Rwanda", "Serbia", "South Korea", "Sudan", "Uganda", "Vietnam", "Zimbabwe")
+tmk_priors <- gen_2 |>
+  filter(ratification_year >= year) |>
+  group_by(participant) |>
+  summarize(sum = sum(tmk_ordinal))
+  
+tmk_priors
 
-gen_joined_2 <- gen_joined |>
-  mutate(gen_bf_rat = if_else(participant %in% gen_pol_prior, 1, 0))
-
-gen_joined_2 <- gen_joined_2 |> 
-  distinct(participant, .keep_all = TRUE)
-gen_joined_2 <- gen_joined_2 |> 
-  mutate(ever_reserved = as.factor(ever_reserved),
-         gen_bf_rat = as.factor(gen_bf_rat))
-
+gen_2 <- gen_2 |> 
+  mutate(sum_of_prior_tmks = case_when(
+    participant == "Azerbaijan" ~ 1,
+    participant == "Bangladesh" ~ 15,
+    participant == "Bosnia-Herzogovina" ~ 5,
+    participant == "Burundi" ~ 41, 
+    participant == "China" ~ 15,
+    participant == "Cyprus" ~ 1,
+    participant == "DR Congo" ~ 9,
+    participant == "India" ~ 26,
+    participant == "Myanmar" ~ 1,
+    participant == "Nigeria" ~ 24,
+    participant == "Pakistan" ~ 12,
+    participant == "Rwanda" ~ 8,
+    participant == "Serbia" ~ 12,
+    participant == "Sudan" ~ 90,
+    participant == "Tanzania" ~ 2,
+    participant == "Uganda" ~ 66,
+    participant == "Zimbabwe" ~ 35,
+    TRUE ~ 0
+  ),
+  ever_reserved = as.factor(ever_reserved))
 ```
-
 ```{r}
-gen_fit <- logistic_reg() |>
-  fit(ever_reserved ~ gen_bf_rat, data = gen_joined_2)
-tidy(gen_fit) |>
-  mutate(est_exp = exp(estimate))
+tmk_fit <- logistic_reg() |>
+  fit(ever_reserved ~ sum_of_prior_tmks, data = gen_2)
 
+tidy(tmk_fit)
+  
 ```
 
 
-```{r}
-gen_joined |>
-  filter(in_effect_ix_reservation == 1 | historical_reservation_made_to_article_ix_no_longer_in_effect == 1)
-```
 
-```{r}
-#| label: write-csv
-write_csv(gen_joined, file = "gen-joined.csv")
-```
+
+
+
+
 
 
 
